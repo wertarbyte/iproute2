@@ -39,6 +39,8 @@ static void usage(void)
 	fprintf(stderr, "          [ prohibit | reject | unreachable ]\n");
 	fprintf(stderr, "          [ realms [SRCREALM/]DSTREALM ]\n");
 	fprintf(stderr, "          [ goto NUMBER ]\n");
+	fprintf(stderr, "          SUPPRESSOR\n");
+	fprintf(stderr, "SUPPRESSOR := [ prefixlength NUMBER ]\n");
 	fprintf(stderr, "TABLE_ID := [ local | main | default | NUMBER ]\n");
 	exit(-1);
 }
@@ -153,8 +155,16 @@ int print_rule(const struct sockaddr_nl *who, struct nlmsghdr *n, void *arg)
 	}
 
 	table = rtm_get_table(r, tb);
-	if (table)
+	if (table) {
 		fprintf(fp, "lookup %s ", rtnl_rttable_n2a(table, b1, sizeof(b1)));
+
+		if (tb[FRA_TABLE_PREFIXLEN_MIN]) {
+			__u8 pl = rta_getattr_u8(tb[FRA_TABLE_PREFIXLEN_MIN]);
+			if (pl) {
+				fprintf(fp, "prefixlength %u ", pl);
+			}
+		}
+	}
 
 	if (tb[FRA_FLOW]) {
 		__u32 to = rta_getattr_u32(tb[FRA_FLOW]);
@@ -310,6 +320,13 @@ static int iprule_modify(int cmd, int argc, char **argv)
 				addattr32(&req.n, sizeof(req), FRA_TABLE, tid);
 			}
 			table_ok = 1;
+		} else if (matches(*argv, "prefixlength") == 0 ||
+			   strcmp(*argv, "pl") == 0) {
+			__u8 pl;
+			NEXT_ARG();
+			if (get_u8(&pl, *argv, 0))
+				invarg("prefixlength value is invalid\n", *argv);
+			addattr8(&req.n, sizeof(req), FRA_TABLE_PREFIXLEN_MIN, pl);
 		} else if (strcmp(*argv, "dev") == 0 ||
 			   strcmp(*argv, "iif") == 0) {
 			NEXT_ARG();
