@@ -41,6 +41,7 @@ static void usage(void)
 	fprintf(stderr, "          [ goto NUMBER ]\n");
 	fprintf(stderr, "          SUPPRESSOR\n");
 	fprintf(stderr, "SUPPRESSOR := [ prefixlength NUMBER ]\n");
+	fprintf(stderr, "              [ suppress_group DEVGROUP ]\n");
 	fprintf(stderr, "TABLE_ID := [ local | main | default | NUMBER ]\n");
 	exit(-1);
 }
@@ -162,6 +163,13 @@ int print_rule(const struct sockaddr_nl *who, struct nlmsghdr *n, void *arg)
 			__u8 pl = rta_getattr_u8(tb[FRA_TABLE_PREFIXLEN_MIN]);
 			if (pl) {
 				fprintf(fp, "prefixlength %u ", pl);
+			}
+		}
+		if (tb[FRA_SUPPRESS_IFGROUP]) {
+			int group = rta_getattr_u32(tb[FRA_SUPPRESS_IFGROUP]);
+			if (group != -1) {
+				SPRINT_BUF(b1);
+				fprintf(fp, "suppress_ifgroup %s ", rtnl_group_n2a(group, b1, sizeof(b1)));
 			}
 		}
 	}
@@ -327,6 +335,12 @@ static int iprule_modify(int cmd, int argc, char **argv)
 			if (get_u8(&pl, *argv, 0))
 				invarg("prefixlength value is invalid\n", *argv);
 			addattr8(&req.n, sizeof(req), FRA_TABLE_PREFIXLEN_MIN, pl);
+		} else if (matches(*argv, "suppress_group") == 0) {
+			NEXT_ARG();
+			int group;
+			if (rtnl_group_a2n(&group, *argv))
+				invarg("Invalid \"suppress_group\" value\n", *argv);
+			addattr32(&req.n, sizeof(req), FRA_SUPPRESS_IFGROUP, group);
 		} else if (strcmp(*argv, "dev") == 0 ||
 			   strcmp(*argv, "iif") == 0) {
 			NEXT_ARG();

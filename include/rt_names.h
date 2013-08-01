@@ -20,7 +20,6 @@ int rtnl_group_a2n(int *id, const char *arg);
 const char *inet_proto_n2a(int proto, char *buf, int len);
 int inet_proto_a2n(const char *buf);
 
-
 const char * ll_type_n2a(int type, char *buf, int len);
 const char *ll_addr_n2a(unsigned char *addr, int alen,
 			int type, char *buf, int blen);
